@@ -1,0 +1,14 @@
+dependencies {
+    // Depends on the core domain module
+    implementation project(':execution-core')
+
+    // Spring Boot infrastructure (without bringing in full Web server dependencies)
+    implementation 'org.springframework.boot:spring-boot-starter-aop:3.2.0'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure:3.2.0'
+
+    // Generates metadata for application.yml auto-complete
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.2.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+}

@@ -1,0 +1,5 @@
+rootProject.name = 'api-execution-core'
+
+include 'execution-core'
+include 'execution-core-spring-boot-starter'
+include 'sample-app'
