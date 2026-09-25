@@ -1,10 +1,15 @@
+plugins {
+    id 'java-library'
+    id 'java-test-fixtures' // Allows sharing test classes with other sub-modules
+}
 dependencies {
     // Pure Java Module: Redis client, JSON parsing, logging abstractions
-    implementation 'io.lettuce:lettuce-core:6.3.2.RELEASE'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
     implementation 'org.slf4j:slf4j-api:2.0.7'
 
     // Optional: Lombok for boilerplate reduction if preferred
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+// Test Fixtures dependencies (Testcontainers & JUnit available to test fixtures)
+    testFixturesApi platform('org.junit:junit-bom:5.10.2')
+    testFixturesApi 'org.junit.jupiter:junit-jupiter'
+    testFixturesApi 'org.testcontainers:junit-jupiter:1.19.7'
 }

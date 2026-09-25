@@ -5,18 +5,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.UncheckedIOException;
 
+/**
+ * Jackson-based implementation of {@link Serializer}.
+ */
 public class JacksonSerializer implements Serializer {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * Creates a serializer backed by a default {@link ObjectMapper}.
+     */
     public JacksonSerializer() {
         this.objectMapper = new ObjectMapper();
     }
 
+    /**
+     * Creates a serializer backed by the supplied {@link ObjectMapper}.
+     *
+     * @param objectMapper mapper to use for serialization and deserialization
+     */
     public JacksonSerializer(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedIOException if the object cannot be serialized as JSON
+     */
     @Override
     public <T> String serialize(T object) {
         try {
@@ -26,6 +42,11 @@ public class JacksonSerializer implements Serializer {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws UncheckedIOException if the JSON cannot be deserialized into the target type
+     */
     @Override
     public <T> T deserialize(String json, Class<T> targetClass) {
         try {

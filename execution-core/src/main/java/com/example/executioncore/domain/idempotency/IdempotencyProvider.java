@@ -2,6 +2,12 @@ package com.example.executioncore.domain.idempotency;
 
 import java.time.Duration;
 
+/**
+ * Primary domain engine managing request idempotency execution lifecycle.
+ * <p>
+ * Handles atomic lock acquisition, in-progress detection, and cached payload retrieval
+ * for duplicate incoming requests.
+ */
 public interface IdempotencyProvider {
 
     /**
