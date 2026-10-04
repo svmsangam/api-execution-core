@@ -20,7 +20,7 @@ public interface AtomicStore {
      *
      * @param key   the unique storage key
      * @param value the payload or lock token to store
-     * @param ttl   the time-to-live duration before automatic expiration; if {@null} or zero, no expiration is applied
+     * @param ttl   the time-to-live duration before automatic expiration; if {@code null} or zero, no expiration is applied
      * @return {@code true} if the key was successfully set; {@code false} if the key already existed
      */
     boolean setIfAbsent(String key, String value, Duration ttl);

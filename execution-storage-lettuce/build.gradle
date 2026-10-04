@@ -1,0 +1,13 @@
+dependencies {
+    // Shared domain interfaces
+    implementation project(':execution-core')
+
+    // Import the test-fixtures published by execution-core
+    testImplementation testFixtures(project(':execution-core'))
+
+    // Drivers marked compileOnly: Required at compile time, but client application must supply it at runtime
+    compileOnly 'io.lettuce:lettuce-core:6.3.2.RELEASE'
+
+    // Driver required for running unit/integration tests within this module
+    testImplementation 'io.lettuce:lettuce-core:6.3.2.RELEASE'
+}

@@ -1,0 +1,12 @@
+dependencies {
+    // Shared domain interfaces
+    implementation project(':execution-core')
+
+    // Import the test-fixtures published by execution-core
+    testImplementation testFixtures(project(':execution-core'))
+    // Drivers marked compileOnly
+    compileOnly 'redis.clients:jedis:5.1.0'
+
+    // Driver required for running unit/integration tests within this module
+    testImplementation 'redis.clients:jedis:5.1.0'
+}
