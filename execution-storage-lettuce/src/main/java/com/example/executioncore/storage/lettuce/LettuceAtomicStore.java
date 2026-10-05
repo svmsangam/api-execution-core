@@ -1,4 +1,4 @@
-package com.example.executioncore.storage.jedis;
+package com.example.executioncore.storage.lettuce;
 
 import com.example.executioncore.domain.storage.AtomicStore;
 import io.lettuce.core.ScriptOutputType;

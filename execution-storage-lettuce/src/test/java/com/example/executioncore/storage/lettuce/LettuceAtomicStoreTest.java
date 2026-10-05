@@ -3,7 +3,6 @@ package com.example.executioncore.storage.lettuce;
 import com.example.executioncore.domain.storage.AtomicStore;
 import com.example.executioncore.storage.AbstractAtomicStoreContractTest;
 import com.example.executioncore.storage.RedisTestContainer;
-import com.example.executioncore.storage.jedis.LettuceAtomicStore;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.junit.jupiter.api.AfterAll;

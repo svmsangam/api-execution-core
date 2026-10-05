@@ -4,7 +4,6 @@ import com.example.executioncore.domain.storage.AtomicStore;
 import com.example.executioncore.storage.AbstractSlidingWindowRateLimiterContractTest;
 import com.example.executioncore.storage.RedisTestContainer;
 
-import com.example.executioncore.storage.jedis.LettuceAtomicStore;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.junit.jupiter.api.AfterAll;
