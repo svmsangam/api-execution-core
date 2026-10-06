@@ -66,9 +66,10 @@ public class ExecutionCoreAutoConfiguration {
         @ConditionalOnMissingBean(IdempotencyProvider.class)
         public IdempotencyProvider idempotencyProvider(
                 AtomicStore atomicStore,
-                Serializer serializer
+                Serializer serializer,
+                ExecutionCoreProperties properties
         ) {
-            return new RedisIdempotencyProvider(atomicStore, serializer);
+            return new RedisIdempotencyProvider(atomicStore, serializer,properties.getIdempotency().getKeyPrefix());
         }
     }
 

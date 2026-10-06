@@ -20,7 +20,7 @@ public interface IdempotencyProvider {
     <T> IdempotencyResult<T> process(String key, Duration lockTtl, Class<T> returnType);
 
     /**
-     * Stores the final result of an execution and transitions the key to COMPLETED.
+     * Stores the final result of an execution and transitions the key to COMPLETE.
      *
      * @param key            Unique idempotency request identifier.
      * @param lockOwnerToken The UUID token obtained during lock acquisition.

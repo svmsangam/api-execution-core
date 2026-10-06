@@ -18,6 +18,7 @@ class RedisIdempotencyProviderTest {
     private InMemoryAtomicStore atomicStore;
     private RedisIdempotencyProvider idempotencyProvider;
 
+    private static final String KEY_PREFIX = "sample:idempotency:";
     private static final Duration LOCK_TTL = Duration.ofSeconds(5);
     private static final Duration RETENTION_TTL = Duration.ofHours(1);
 
@@ -27,7 +28,7 @@ class RedisIdempotencyProviderTest {
     @BeforeEach
     void setUp() {
         atomicStore = new InMemoryAtomicStore();
-        idempotencyProvider = new RedisIdempotencyProvider(atomicStore, new JacksonSerializer());
+        idempotencyProvider = new RedisIdempotencyProvider(atomicStore, new JacksonSerializer(),KEY_PREFIX);
     }
 
     @Test
@@ -40,6 +41,9 @@ class RedisIdempotencyProviderTest {
         assertEquals(ExecutionState.ACQUIRED, result.state());
         assertNotNull(result.lockOwnerToken());
         assertTrue(result.cachedResponse().isEmpty());
+
+        // Verify underlying storage received the prefixed key
+        assertTrue(atomicStore.get(KEY_PREFIX + key).isPresent());
     }
 
     @Test
@@ -112,5 +116,21 @@ class RedisIdempotencyProviderTest {
         // 3. Lock should still be held
         IdempotencyResult<PaymentResponse> secondResult = idempotencyProvider.process(key, LOCK_TTL, PaymentResponse.class);
         assertEquals(ExecutionState.IN_PROGRESS, secondResult.state());
+    }
+
+    @Test
+    @DisplayName("Null keyPrefix should default gracefully without throwing NullPointerException")
+    void shouldHandleNullKeyPrefixGracefully() {
+        RedisIdempotencyProvider nullPrefixProvider = new RedisIdempotencyProvider(
+                atomicStore,
+                new JacksonSerializer(),
+                null
+        );
+
+        String key = "req_106";
+        IdempotencyResult<PaymentResponse> result = nullPrefixProvider.process(key, LOCK_TTL, PaymentResponse.class);
+
+        assertEquals(ExecutionState.ACQUIRED, result.state());
+        assertTrue(atomicStore.get(key).isPresent());
     }
 }

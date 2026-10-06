@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    // Core Domain Module
-    implementation project(':execution-core')
+    // Transitively expose core domain interfaces (RateLimiter, IdempotencyProvider, etc.) to consumers
+    api project(':execution-core')
 
     // Storage Adapter Modules
     // Provides class references (LettuceAtomicStore, JedisAtomicStore, SpringDataRedisAtomicStore)
