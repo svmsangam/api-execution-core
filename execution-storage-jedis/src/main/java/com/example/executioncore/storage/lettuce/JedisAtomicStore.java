@@ -17,13 +17,16 @@ import java.util.Optional;
 public class JedisAtomicStore implements AtomicStore {
 
     private static final String COMPARE_AND_DELETE_RESOURCE = "scripts/compare_and_delete.lua";
+    private static final String COMPARE_AND_SET_RESOURCE = "scripts/compare_and_set.lua";
 
     private final JedisPool jedisPool;
     private final String compareAndDeleteScript;
+    private final String compareAndSetScript;
 
     public JedisAtomicStore(JedisPool jedisPool) {
         this.jedisPool = Objects.requireNonNull(jedisPool, "jedisPool must not be null");
-        this.compareAndDeleteScript = loadScript();
+        this.compareAndDeleteScript = loadScript(COMPARE_AND_DELETE_RESOURCE);
+        this.compareAndSetScript = loadScript(COMPARE_AND_SET_RESOURCE);
     }
 
     @Override
@@ -57,10 +60,15 @@ public class JedisAtomicStore implements AtomicStore {
     }
 
     @Override
-    public void set(String key, String value, Duration ttl) {
-        validateKeyValueAndTtl(key, value, ttl);
+    public boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl) {
+        validateKeyValueAndTtl(key, newValue, ttl);
+        Objects.requireNonNull(expectedValue, "expectedValue must not be null");
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.set(key, value, SetParams.setParams().px(ttl.toMillis()));
+            Object result = jedis.eval(
+                    compareAndSetScript,
+                    List.of(key),
+                    List.of(expectedValue, newValue, Long.toString(ttl.toMillis())));
+            return Long.valueOf(1L).equals(result);
         }
     }
 
@@ -83,14 +91,14 @@ public class JedisAtomicStore implements AtomicStore {
         }
     }
 
-    private static String loadScript() {
-        try (InputStream inputStream = JedisAtomicStore.class.getClassLoader().getResourceAsStream(JedisAtomicStore.COMPARE_AND_DELETE_RESOURCE)) {
+    private static String loadScript(String resource) {
+        try (InputStream inputStream = JedisAtomicStore.class.getClassLoader().getResourceAsStream(resource)) {
             if (inputStream == null) {
-                throw new UncheckedIOException(new IOException("Missing Lua resource: " + JedisAtomicStore.COMPARE_AND_DELETE_RESOURCE));
+                throw new UncheckedIOException(new IOException("Missing Lua resource: " + resource));
             }
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException exception) {
-            throw new UncheckedIOException("Unable to load Lua resource: " + JedisAtomicStore.COMPARE_AND_DELETE_RESOURCE, exception);
+            throw new UncheckedIOException("Unable to load Lua resource: " + resource, exception);
         }
     }
 }

@@ -34,13 +34,16 @@ public interface AtomicStore {
     Optional<String> get(String key);
 
     /**
-     * Sets a key to a given value, unconditionally overwriting any existing data.
+     * Replaces a key's value only when its current value matches the expected value.
+     * The comparison, replacement, and TTL update must be atomic.
      *
-     * @param key   the unique storage key
-     * @param value the string value to store
-     * @param ttl   the time-to-live duration before automatic expiration
+     * @param key           the unique storage key
+     * @param expectedValue the value expected to currently be stored
+     * @param newValue      the value to store when the comparison succeeds
+     * @param ttl           the time-to-live duration before automatic expiration
+     * @return {@code true} if the value matched and was replaced; {@code false} otherwise
      */
-    void set(String key, String value, Duration ttl);
+    boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl);
 
     /**
      * Compares the current value of a key against an expected value and deletes the key

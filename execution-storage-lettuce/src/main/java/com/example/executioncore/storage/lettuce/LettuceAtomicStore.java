@@ -16,13 +16,36 @@ import java.util.Optional;
 public class LettuceAtomicStore implements AtomicStore {
 
     private static final String COMPARE_AND_DELETE_RESOURCE = "scripts/compare_and_delete.lua";
+    private static final String COMPARE_AND_SET_RESOURCE = "scripts/compare_and_set.lua";
 
     private final StatefulRedisConnection<String, String> connection;
     private final String compareAndDeleteScript;
+    private final String compareAndSetScript;
 
     public LettuceAtomicStore(StatefulRedisConnection<String, String> connection) {
         this.connection = Objects.requireNonNull(connection, "connection must not be null");
-        this.compareAndDeleteScript = loadScript();
+        this.compareAndDeleteScript = loadScript(COMPARE_AND_DELETE_RESOURCE);
+        this.compareAndSetScript = loadScript(COMPARE_AND_SET_RESOURCE);
+    }
+
+    private static void validateKeyValueAndTtl(String key, String value, Duration ttl) {
+        Objects.requireNonNull(key, "key must not be null");
+        Objects.requireNonNull(value, "value must not be null");
+        Objects.requireNonNull(ttl, "ttl must not be null");
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("ttl must be positive");
+        }
+    }
+
+    private static String loadScript(String resource) {
+        try (InputStream inputStream = LettuceAtomicStore.class.getClassLoader().getResourceAsStream(resource)) {
+            if (inputStream == null) {
+                throw new UncheckedIOException(new IOException("Missing Lua resource: " + resource));
+            }
+            return new String(inputStream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new UncheckedIOException("Unable to load Lua resource: " + resource, exception);
+        }
     }
 
     @Override
@@ -54,9 +77,17 @@ public class LettuceAtomicStore implements AtomicStore {
     }
 
     @Override
-    public void set(String key, String value, Duration ttl) {
-        validateKeyValueAndTtl(key, value, ttl);
-        connection.sync().set(key, value, SetArgs.Builder.px(ttl.toMillis()));
+    public boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl) {
+        validateKeyValueAndTtl(key, newValue, ttl);
+        Objects.requireNonNull(expectedValue, "expectedValue must not be null");
+        Long result = connection.sync().eval(
+                compareAndSetScript,
+                ScriptOutputType.INTEGER,
+                new String[]{key},
+                expectedValue,
+                newValue,
+                Long.toString(ttl.toMillis()));
+        return Long.valueOf(1L).equals(result);
     }
 
     @Override
@@ -70,25 +101,5 @@ public class LettuceAtomicStore implements AtomicStore {
                 new String[]{key},
                 expectedValue);
         return Long.valueOf(1L).equals(result);
-    }
-
-    private static void validateKeyValueAndTtl(String key, String value, Duration ttl) {
-        Objects.requireNonNull(key, "key must not be null");
-        Objects.requireNonNull(value, "value must not be null");
-        Objects.requireNonNull(ttl, "ttl must not be null");
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException("ttl must be positive");
-        }
-    }
-
-    private static String loadScript() {
-        try (InputStream inputStream = LettuceAtomicStore.class.getClassLoader().getResourceAsStream(LettuceAtomicStore.COMPARE_AND_DELETE_RESOURCE)) {
-            if (inputStream == null) {
-                throw new UncheckedIOException(new IOException("Missing Lua resource: " + LettuceAtomicStore.COMPARE_AND_DELETE_RESOURCE));
-            }
-            return new String(inputStream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (IOException exception) {
-            throw new UncheckedIOException("Unable to load Lua resource: " + LettuceAtomicStore.COMPARE_AND_DELETE_RESOURCE, exception);
-        }
     }
 }

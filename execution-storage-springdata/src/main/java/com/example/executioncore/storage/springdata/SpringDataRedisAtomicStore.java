@@ -17,14 +17,17 @@ import java.util.Optional;
 public class SpringDataRedisAtomicStore implements AtomicStore {
 
     private static final String COMPARE_AND_DELETE_RESOURCE = "scripts/compare_and_delete.lua";
+    private static final String COMPARE_AND_SET_RESOURCE = "scripts/compare_and_set.lua";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final String compareAndDeleteScript;
+    private final String compareAndSetScript;
 
     public SpringDataRedisAtomicStore(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = Objects.requireNonNull(
                 stringRedisTemplate, "stringRedisTemplate must not be null");
-        this.compareAndDeleteScript = loadScript();
+        this.compareAndDeleteScript = loadScript(COMPARE_AND_DELETE_RESOURCE);
+        this.compareAndSetScript = loadScript(COMPARE_AND_SET_RESOURCE);
     }
 
     @Override
@@ -52,9 +55,17 @@ public class SpringDataRedisAtomicStore implements AtomicStore {
     }
 
     @Override
-    public void set(String key, String value, Duration ttl) {
-        validateKeyValueAndTtl(key, value, ttl);
-        stringRedisTemplate.opsForValue().set(key, value, ttl);
+    public boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl) {
+        validateKeyValueAndTtl(key, newValue, ttl);
+        Objects.requireNonNull(expectedValue, "expectedValue must not be null");
+        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(compareAndSetScript, Long.class);
+        Long result = stringRedisTemplate.execute(
+                redisScript,
+                List.of(key),
+                expectedValue,
+                newValue,
+                Long.toString(ttl.toMillis()));
+        return Long.valueOf(1L).equals(result);
     }
 
     @Override
@@ -76,12 +87,12 @@ public class SpringDataRedisAtomicStore implements AtomicStore {
         }
     }
 
-    private static String loadScript() {
-        ClassPathResource resource = new ClassPathResource(SpringDataRedisAtomicStore.COMPARE_AND_DELETE_RESOURCE);
+    private static String loadScript(String resourcePath) {
+        ClassPathResource resource = new ClassPathResource(resourcePath);
         try (InputStream inputStream = resource.getInputStream()) {
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException exception) {
-            throw new UncheckedIOException("Unable to load Lua resource: " + SpringDataRedisAtomicStore.COMPARE_AND_DELETE_RESOURCE, exception);
+            throw new UncheckedIOException("Unable to load Lua resource: " + resourcePath, exception);
         }
     }
 }

@@ -70,9 +70,12 @@ public class RedisIdempotencyProvider implements IdempotencyProvider {
         String serializedResponse = serializer.serialize(response);
         log.debug("Committing completed response for key='{}': {}", fullKey, serializedResponse);
 
-        // Overwrite key with serialized payload
-        atomicStore.set(fullKey, serializedResponse, retentionTtl);
-        log.info("Successfully cached response for idempotency key='{}' (TTL={})", fullKey, retentionTtl);
+        if (atomicStore.compareAndSet(fullKey, expectedLockValue, serializedResponse, retentionTtl)) {
+            log.info("Successfully cached response for idempotency key='{}' (TTL={})", fullKey, retentionTtl);
+        } else {
+            log.warn("Could not cache response for idempotency key='{}': lock is no longer owned", fullKey);
+            throw new IllegalStateException("Execution lock expired before completion could be committed for key: " + fullKey);
+        }
     }
 
     @Override

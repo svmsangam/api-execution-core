@@ -85,6 +85,31 @@ class RedisIdempotencyProviderTest {
     }
 
     @Test
+    @DisplayName("Stale lock owner must not overwrite a newer lock")
+    void shouldNotCacheResponseWhenLockOwnershipWasLost() {
+        String key = "idempotency:req_107";
+
+        IdempotencyResult<PaymentResponse> staleOwner =
+                idempotencyProvider.process(key, LOCK_TTL, PaymentResponse.class);
+        idempotencyProvider.releaseLock(key, staleOwner.lockOwnerToken());
+
+        IdempotencyResult<PaymentResponse> currentOwner =
+                idempotencyProvider.process(key, LOCK_TTL, PaymentResponse.class);
+        assertEquals(ExecutionState.ACQUIRED, currentOwner.state());
+
+        assertThrows(IllegalStateException.class, () -> idempotencyProvider.markCompleted(
+                key,
+                staleOwner.lockOwnerToken(),
+                new PaymentResponse("stale", "SUCCESS", 10.0),
+                RETENTION_TTL));
+
+        assertEquals("LOCKED:" + currentOwner.lockOwnerToken(),
+                atomicStore.get(KEY_PREFIX + key).orElseThrow());
+        assertEquals(ExecutionState.IN_PROGRESS,
+                idempotencyProvider.process(key, LOCK_TTL, PaymentResponse.class).state());
+    }
+
+    @Test
     @DisplayName("Releasing lock on failure should allow immediate retry")
     void shouldAllowRetryAfterLockRelease() {
         String key = "idempotency:req_104";

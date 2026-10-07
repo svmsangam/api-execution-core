@@ -62,8 +62,14 @@ public class InMemoryAtomicStore implements AtomicStore {
     }
 
     @Override
-    public void set(String key, String value, Duration ttl) {
-        stringStore.put(key, value);
+    public boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl) {
+        synchronized (this) {
+            if (expectedValue.equals(stringStore.get(key))) {
+                stringStore.put(key, newValue);
+                return true;
+            }
+            return false;
+        }
     }
 
     @Override

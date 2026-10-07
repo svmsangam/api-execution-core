@@ -22,11 +22,14 @@ public abstract class AbstractAtomicStoreContractTest {
     }
 
     @Test
-    @DisplayName("set and get basic key-value contract")
-    void testSetAndGet() {
+    @DisplayName("compareAndSet updates a key only when the expected value matches")
+    void testCompareAndSet() {
         AtomicStore store = getStore();
-        store.set("test:key:1", "hello-world", Duration.ofMinutes(1));
+        assertTrue(store.setIfAbsent("test:key:1", "lock-token", Duration.ofMinutes(1)));
+        assertFalse(store.compareAndSet("test:key:1", "wrong-token", "wrong-value", Duration.ofMinutes(1)));
+        assertEquals("lock-token", store.get("test:key:1").orElseThrow());
 
+        assertTrue(store.compareAndSet("test:key:1", "lock-token", "hello-world", Duration.ofMinutes(1)));
         Optional<String> val = store.get("test:key:1");
         assertTrue(val.isPresent());
         assertEquals("hello-world", val.get());
@@ -50,7 +53,7 @@ public abstract class AbstractAtomicStoreContractTest {
     @DisplayName("compareAndDelete removes key only when expected value matches")
     void testCompareAndDelete() {
         AtomicStore store = getStore();
-        store.set("test:key:cad", "token-123", Duration.ofMinutes(1));
+        store.setIfAbsent("test:key:cad", "token-123", Duration.ofMinutes(1));
 
         // Wrong token fails
         boolean wrongDelete = store.compareAndDelete("test:key:cad", "wrong-token");
