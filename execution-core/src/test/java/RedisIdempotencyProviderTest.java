@@ -4,12 +4,16 @@ import com.example.executioncore.domain.idempotency.ExecutionState;
 import com.example.executioncore.domain.idempotency.IdempotencyResult;
 import com.example.executioncore.domain.idempotency.RedisIdempotencyProvider;
 import com.example.executioncore.domain.serializer.JacksonSerializer;
+import com.example.executioncore.domain.serializer.Serializer;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Type;
 import java.time.Duration;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -82,6 +86,54 @@ class RedisIdempotencyProviderTest {
         assertEquals("pay_999", duplicateResult.cachedResponse().get().paymentId());
         assertEquals("SUCCESS", duplicateResult.cachedResponse().get().status());
         assertEquals(150.00, duplicateResult.cachedResponse().get().amount());
+    }
+
+    @Test
+    @DisplayName("Cached responses preserve parameterized generic types")
+    void shouldReturnCachedParameterizedPayload() {
+        String key = "idempotency:req_generic";
+        TypeReference<List<PaymentResponse>> responseType = new TypeReference<>() {};
+
+        IdempotencyResult<List<PaymentResponse>> acquired =
+                idempotencyProvider.process(key, LOCK_TTL, responseType.getType());
+        List<PaymentResponse> original = List.of(new PaymentResponse("pay_generic", "SUCCESS", 42.0));
+        idempotencyProvider.markCompleted(key, acquired.lockOwnerToken(), original, RETENTION_TTL);
+
+        IdempotencyResult<List<PaymentResponse>> cached =
+                idempotencyProvider.process(key, LOCK_TTL, responseType.getType());
+
+        assertEquals(ExecutionState.COMPLETED, cached.state());
+        assertEquals(PaymentResponse.class, cached.cachedResponse().orElseThrow().get(0).getClass());
+        assertEquals(original, cached.cachedResponse().orElseThrow());
+    }
+
+    @Test
+    @DisplayName("Completed void executions do not deserialize a cached payload")
+    void shouldSkipDeserializationForVoidReturnType() {
+        Serializer noDeserializationSerializer = new Serializer() {
+            @Override
+            public <T> String serialize(T object) {
+                return "completed";
+            }
+
+            @Override
+            public <T> T deserialize(String json, Type targetType) {
+                throw new AssertionError("Void responses must not be deserialized");
+            }
+        };
+        RedisIdempotencyProvider provider = new RedisIdempotencyProvider(
+                atomicStore,
+                noDeserializationSerializer,
+                KEY_PREFIX
+        );
+        String key = "idempotency:req_void";
+        IdempotencyResult<Void> acquired = provider.process(key, LOCK_TTL, Void.class);
+        provider.markCompleted(key, acquired.lockOwnerToken(), null, RETENTION_TTL);
+
+        IdempotencyResult<Void> cached = provider.process(key, LOCK_TTL, Void.class);
+
+        assertEquals(ExecutionState.COMPLETED, cached.state());
+        assertTrue(cached.cachedResponse().isEmpty());
     }
 
     @Test

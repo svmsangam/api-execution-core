@@ -5,6 +5,7 @@ import com.example.executioncore.domain.storage.AtomicStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,7 +27,7 @@ public class RedisIdempotencyProvider implements IdempotencyProvider {
     }
 
     @Override
-    public <T> IdempotencyResult<T> process(String key, Duration lockTtl, Class<T> returnType) {
+    public <T> IdempotencyResult<T> process(String key, Duration lockTtl, Type returnType) {
         String fullKey = buildKey(key);
         String lockOwnerToken = UUID.randomUUID().toString();
         String lockValue = LOCK_PREFIX + lockOwnerToken;
@@ -58,6 +59,9 @@ public class RedisIdempotencyProvider implements IdempotencyProvider {
 
         // 3. Request completed previously — deserialize cached payload
         log.info("Idempotency cache HIT for key='{}'", fullKey);
+        if (returnType == void.class || returnType == Void.class) {
+            return IdempotencyResult.completed(null);
+        }
         T cachedResponse = serializer.deserialize(existingValue, returnType);
         return IdempotencyResult.completed(cachedResponse);
     }

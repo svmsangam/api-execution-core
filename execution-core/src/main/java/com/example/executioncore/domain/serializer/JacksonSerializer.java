@@ -1,9 +1,11 @@
 package com.example.executioncore.domain.serializer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.UncheckedIOException;
+import java.lang.reflect.Type;
 
 /**
  * Jackson-based implementation of {@link Serializer}.
@@ -48,11 +50,12 @@ public class JacksonSerializer implements Serializer {
      * @throws UncheckedIOException if the JSON cannot be deserialized into the target type
      */
     @Override
-    public <T> T deserialize(String json, Class<T> targetClass) {
+    public <T> T deserialize(String json, Type targetType) {
+        JavaType javaType = objectMapper.getTypeFactory().constructType(targetType);
         try {
-            return objectMapper.readValue(json, targetClass);
+            return objectMapper.readValue(json, javaType);
         } catch (JsonProcessingException e) {
-            throw new UncheckedIOException("Failed to deserialize JSON to " + targetClass.getName(), e);
+            throw new UncheckedIOException("Failed to deserialize JSON to " + targetType.getTypeName(), e);
         }
     }
 }

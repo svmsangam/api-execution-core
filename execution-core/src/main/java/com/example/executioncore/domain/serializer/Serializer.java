@@ -1,5 +1,7 @@
 package com.example.executioncore.domain.serializer;
 
+import java.lang.reflect.Type;
+
 /**
  * Defines operations for converting objects to and from serialized text.
  */
@@ -18,9 +20,9 @@ public interface Serializer {
      * Deserializes text into an object of the requested type.
      *
      * @param json       serialized object
-     * @param targetClass class to deserialize the object into
+     * @param targetType type, including any generic parameters, to deserialize the object into
      * @param <T>        type of the deserialized object
      * @return deserialized object
      */
-    <T> T deserialize(String json, Class<T> targetClass);
+    <T> T deserialize(String json, Type targetType);
 }

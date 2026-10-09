@@ -6,6 +6,9 @@ dependencies {
     // Transitively expose core domain interfaces (RateLimiter, IdempotencyProvider, etc.) to consumers
     api project(':execution-core')
 
+    // Lightweight spring-web dependency for ResponseEntity without pulling Tomcat/MVC
+    compileOnly 'org.springframework:spring-web'
+
     // Storage Adapter Modules
     // Provides class references (LettuceAtomicStore, JedisAtomicStore, SpringDataRedisAtomicStore)
     // needed by ExecutionStorageAutoConfiguration.

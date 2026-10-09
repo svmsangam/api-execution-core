@@ -1,5 +1,6 @@
 package com.example.executioncore.domain.idempotency;
 
+import java.lang.reflect.Type;
 import java.time.Duration;
 
 /**
@@ -15,9 +16,9 @@ public interface IdempotencyProvider {
      *
      * @param key         Unique idempotency request identifier.
      * @param lockTtl     Safety duration for lock auto-expiration (prevents deadlocks on crashes).
-     * @param returnType  Target Class type for deserializing cached results if completed.
+     * @param returnType  Target type, including generic parameters, for cached results.
      */
-    <T> IdempotencyResult<T> process(String key, Duration lockTtl, Class<T> returnType);
+    <T> IdempotencyResult<T> process(String key, Duration lockTtl, Type returnType);
 
     /**
      * Stores the final result of an execution and transitions the key to COMPLETE.

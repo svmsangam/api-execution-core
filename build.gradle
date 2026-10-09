@@ -15,16 +15,22 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management' // <--- Apply the plugin to subprojects!
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17) // or 21
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.5"
         }
     }
 
     dependencies {
-        // Shared compile/test dependencies across all subprojects if needed
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 

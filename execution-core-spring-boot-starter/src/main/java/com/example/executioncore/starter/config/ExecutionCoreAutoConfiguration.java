@@ -7,6 +7,9 @@ import com.example.executioncore.domain.ratelimit.SlidingWindowRateLimiter;
 import com.example.executioncore.domain.serializer.JacksonSerializer;
 import com.example.executioncore.domain.serializer.Serializer;
 import com.example.executioncore.domain.storage.AtomicStore;
+import com.example.executioncore.starter.aspect.IdempotencyAspect;
+import com.example.executioncore.starter.aspect.RateLimitAspect;
+import com.example.executioncore.starter.expression.SpelExpressionEvaluator;
 import com.example.executioncore.starter.properties.ExecutionCoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -31,6 +34,11 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnBean(AtomicStore.class)
 public class ExecutionCoreAutoConfiguration {
 
+    @Bean
+    public SpelExpressionEvaluator spelExpressionEvaluator() {
+        return new SpelExpressionEvaluator();
+    }
+
     // =========================================================================
     // 1. Rate Limiter Strategy Provisioning
     // =========================================================================
@@ -53,6 +61,15 @@ public class ExecutionCoreAutoConfiguration {
         public RateLimiter slidingWindowRateLimiter(AtomicStore atomicStore) {
             return new SlidingWindowRateLimiter(atomicStore);
         }
+
+        @Bean
+        public RateLimitAspect rateLimitAspect(
+                RateLimiter rateLimiter,
+                SpelExpressionEvaluator expressionEvaluator,
+                ExecutionCoreProperties properties
+        ) {
+            return new RateLimitAspect(rateLimiter, expressionEvaluator, properties);
+        }
     }
 
     // =========================================================================
@@ -70,6 +87,15 @@ public class ExecutionCoreAutoConfiguration {
                 ExecutionCoreProperties properties
         ) {
             return new RedisIdempotencyProvider(atomicStore, serializer,properties.getIdempotency().getKeyPrefix());
+        }
+
+        @Bean
+        public IdempotencyAspect idempotencyAspect(
+                IdempotencyProvider idempotencyProvider,
+                SpelExpressionEvaluator expressionEvaluator,
+                ExecutionCoreProperties properties
+        ) {
+            return new IdempotencyAspect(idempotencyProvider, expressionEvaluator, properties);
         }
     }
 

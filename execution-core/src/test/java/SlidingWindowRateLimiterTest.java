@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -57,6 +58,24 @@ class SlidingWindowRateLimiterTest {
         RateLimitResult overflowResult = rateLimiter.evaluate(clientKey, capacity, window);
         assertFalse(overflowResult.isAllowed());
         assertEquals(0, overflowResult.remainingTokens());
+    }
+
+    @Test
+    @DisplayName("Should deny requests when the script response omits remaining capacity")
+    @SuppressWarnings("unchecked")
+    void shouldDenyRequestWhenRemainingCapacityIsMissing() {
+        InMemoryAtomicStore incompleteResponseStore = new InMemoryAtomicStore() {
+            @Override
+            public <T> T executeScript(String script, List<String> keys, List<String> args, Class<T> returnType) {
+                return (T) List.of(1L);
+            }
+        };
+        SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(incompleteResponseStore);
+
+        RateLimitResult result = limiter.evaluate("user_missing_metrics", 3, Duration.ofSeconds(10));
+
+        assertFalse(result.isAllowed());
+        assertEquals(0, result.remainingTokens());
     }
 
     @Test
